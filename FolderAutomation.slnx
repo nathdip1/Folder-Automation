@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FolderAutomation.Core/FolderAutomation.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/FolderAutomation.App/">
+    <Project Path="src/FolderAutomation.App/FolderAutomation.csproj" />
+  </Folder>
+</Solution>
