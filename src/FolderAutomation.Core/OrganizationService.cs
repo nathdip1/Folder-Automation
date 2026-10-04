@@ -18,6 +18,9 @@ public class OrganizationService
         // One OperationId represents one complete Organize action.
         string operationId = Guid.NewGuid().ToString();
 
+        string normalizedFolderPath =
+            new DirectoryInfo(folderPath).FullName;
+
         foreach (var item in plan)
         {
             try
@@ -55,12 +58,13 @@ public class OrganizationService
                 File.Move(sourcePath, destinationPath);
 
                 _undoRecorder.Record(new UndoOperation
-                {
-                    OperationId = operationId,
-                    OriginalPath = sourcePath,
-                    NewPath = destinationPath,
-                    ExecutedAt = DateTime.UtcNow
-                });
+{
+    OperationId = operationId,
+    FolderPath = folderPath,
+    OriginalPath = sourcePath,
+    NewPath = destinationPath,
+    ExecutedAt = DateTime.UtcNow
+});
 
                 result.MovedFiles.Add(item.File.Name);
             }

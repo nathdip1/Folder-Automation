@@ -25,6 +25,7 @@ public class UndoRepository : IUndoRecorder
             (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 OperationId TEXT NOT NULL,
+                FolderPath TEXT NOT NULL,
                 OriginalPath TEXT NOT NULL,
                 NewPath TEXT NOT NULL,
                 ExecutedAt TEXT NOT NULL
@@ -33,11 +34,21 @@ public class UndoRepository : IUndoRecorder
 
         createTableCommand.ExecuteNonQuery();
 
-        AddOperationIdColumnIfNeeded(connection);
+        AddColumnIfNeeded(
+            connection,
+            "OperationId",
+            "TEXT NOT NULL DEFAULT ''");
+
+        AddColumnIfNeeded(
+            connection,
+            "FolderPath",
+            "TEXT NOT NULL DEFAULT ''");
     }
 
-    private static void AddOperationIdColumnIfNeeded(
-        SqliteConnection connection)
+    private static void AddColumnIfNeeded(
+        SqliteConnection connection,
+        string columnName,
+        string columnDefinition)
     {
         using var command = connection.CreateCommand();
 
@@ -47,34 +58,33 @@ public class UndoRepository : IUndoRecorder
 
         using var reader = command.ExecuteReader();
 
-        bool operationIdExists = false;
+        bool columnExists = false;
 
         while (reader.Read())
         {
-            string columnName = reader.GetString(1);
+            string existingColumnName = reader.GetString(1);
 
-            if (columnName.Equals(
-                "OperationId",
+            if (existingColumnName.Equals(
+                columnName,
                 StringComparison.OrdinalIgnoreCase))
             {
-                operationIdExists = true;
+                columnExists = true;
                 break;
             }
         }
 
         reader.Close();
 
-        if (operationIdExists)
+        if (columnExists)
         {
             return;
         }
 
         using var alterCommand = connection.CreateCommand();
 
-        alterCommand.CommandText = """
-            ALTER TABLE UndoOperations
-            ADD COLUMN OperationId TEXT NOT NULL DEFAULT '';
-            """;
+        alterCommand.CommandText =
+            $"ALTER TABLE UndoOperations " +
+            $"ADD COLUMN {columnName} {columnDefinition};";
 
         alterCommand.ExecuteNonQuery();
     }
@@ -91,6 +101,7 @@ public class UndoRepository : IUndoRecorder
             INSERT INTO UndoOperations
             (
                 OperationId,
+                FolderPath,
                 OriginalPath,
                 NewPath,
                 ExecutedAt
@@ -98,6 +109,7 @@ public class UndoRepository : IUndoRecorder
             VALUES
             (
                 $operationId,
+                $folderPath,
                 $originalPath,
                 $newPath,
                 $executedAt
@@ -107,6 +119,10 @@ public class UndoRepository : IUndoRecorder
         command.Parameters.AddWithValue(
             "$operationId",
             operation.OperationId);
+
+        command.Parameters.AddWithValue(
+            "$folderPath",
+            operation.FolderPath);
 
         command.Parameters.AddWithValue(
             "$originalPath",
@@ -123,7 +139,8 @@ public class UndoRepository : IUndoRecorder
         command.ExecuteNonQuery();
     }
 
-    public List<UndoOperation> GetLatestOperation()
+    public List<UndoOperation> GetLatestOperation(
+        string folderPath)
     {
         using var connection = _databaseConnection.CreateConnection();
 
@@ -137,9 +154,14 @@ public class UndoRepository : IUndoRecorder
                 SELECT OperationId
                 FROM UndoOperations
                 WHERE OperationId <> ''
+                  AND FolderPath = $folderPath
                 ORDER BY Id DESC
                 LIMIT 1;
                 """;
+
+            operationCommand.Parameters.AddWithValue(
+                "$folderPath",
+                folderPath);
 
             operationId = operationCommand
                 .ExecuteScalar()
@@ -156,17 +178,23 @@ public class UndoRepository : IUndoRecorder
         command.CommandText = """
             SELECT
                 OperationId,
+                FolderPath,
                 OriginalPath,
                 NewPath,
                 ExecutedAt
             FROM UndoOperations
             WHERE OperationId = $operationId
+              AND FolderPath = $folderPath
             ORDER BY Id DESC;
             """;
 
         command.Parameters.AddWithValue(
             "$operationId",
             operationId);
+
+        command.Parameters.AddWithValue(
+            "$folderPath",
+            folderPath);
 
         using var reader = command.ExecuteReader();
 
@@ -177,10 +205,11 @@ public class UndoRepository : IUndoRecorder
             operations.Add(new UndoOperation
             {
                 OperationId = reader.GetString(0),
-                OriginalPath = reader.GetString(1),
-                NewPath = reader.GetString(2),
+                FolderPath = reader.GetString(1),
+                OriginalPath = reader.GetString(2),
+                NewPath = reader.GetString(3),
                 ExecutedAt = DateTime.Parse(
-                    reader.GetString(3))
+                    reader.GetString(4))
             });
         }
 

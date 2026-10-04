@@ -149,12 +149,27 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        var operations = _undoRepository.GetLatestOperation();
+        if (string.IsNullOrWhiteSpace(SelectedFolderText.Text) ||
+            SelectedFolderText.Text == "No folder selected")
+        {
+            MessageBox.Show(
+                "Please select a folder first.",
+                "No Folder Selected",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            return;
+        }
+
+        string folderPath = SelectedFolderText.Text;
+
+        var operations =
+            _undoRepository.GetLatestOperation(folderPath);
 
         if (operations.Count == 0)
         {
             MessageBox.Show(
-                "There is nothing to undo.",
+                "There is nothing to undo for this folder.",
                 "Undo",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -163,8 +178,8 @@ public partial class MainWindow : Window
         }
 
         MessageBoxResult confirmation = MessageBox.Show(
-            $"The last organization operation contains " +
-            $"{operations.Count} file(s).\n\n" +
+            $"The last organization operation for this folder " +
+            $"contains {operations.Count} file(s).\n\n" +
             "Do you want to undo it?",
             "Confirm Undo",
             MessageBoxButton.YesNo,
@@ -179,11 +194,7 @@ public partial class MainWindow : Window
 
         ShowUndoResult(result);
 
-        if (!string.IsNullOrWhiteSpace(SelectedFolderText.Text) &&
-            SelectedFolderText.Text != "No folder selected")
-        {
-            LoadFiles(SelectedFolderText.Text);
-        }
+        LoadFiles(folderPath);
     }
 
     private void ShowOrganizationResult(
