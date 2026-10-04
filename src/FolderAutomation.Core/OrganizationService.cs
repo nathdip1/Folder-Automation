@@ -2,11 +2,21 @@ namespace FolderAutomation.Core;
 
 public class OrganizationService
 {
+    private readonly IUndoRecorder _undoRecorder;
+
+    public OrganizationService(IUndoRecorder undoRecorder)
+    {
+        _undoRecorder = undoRecorder;
+    }
+
     public OrganizationResult Organize(
         string folderPath,
         IReadOnlyList<OrganizationItem> plan)
     {
         var result = new OrganizationResult();
+
+        // One OperationId represents one complete Organize action.
+        string operationId = Guid.NewGuid().ToString();
 
         foreach (var item in plan)
         {
@@ -43,6 +53,14 @@ public class OrganizationService
                 }
 
                 File.Move(sourcePath, destinationPath);
+
+                _undoRecorder.Record(new UndoOperation
+                {
+                    OperationId = operationId,
+                    OriginalPath = sourcePath,
+                    NewPath = destinationPath,
+                    ExecutedAt = DateTime.UtcNow
+                });
 
                 result.MovedFiles.Add(item.File.Name);
             }
