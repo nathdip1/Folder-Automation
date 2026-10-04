@@ -1,4 +1,10 @@
-﻿using System.Windows;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using FolderAutomation.Core;
 using FolderAutomation.Data;
 
@@ -19,12 +25,12 @@ public partial class MainWindow : Window
         _fileService = new FileService();
         _organizationPlanner = new OrganizationPlanner();
 
-        string applicationDataFolder = System.IO.Path.Combine(
+        string applicationDataFolder = Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),
             "FolderAutomation");
 
-        string databasePath = System.IO.Path.Combine(
+        string databasePath = Path.Combine(
             applicationDataFolder,
             "FolderAutomation.db");
 
@@ -40,6 +46,61 @@ public partial class MainWindow : Window
         _undoService = new UndoService();
     }
 
+
+    // ============================================================
+    // FEATURE ACCORDION
+    // ============================================================
+
+    private void FeatureExpander_Expanded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Expander expandedExpander)
+            return;
+
+        foreach (var expander in FindVisualChildren<Expander>(this))
+        {
+            if (!ReferenceEquals(expander, expandedExpander))
+            {
+                expander.IsExpanded = false;
+            }
+        }
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(
+        DependencyObject dependencyObject)
+        where T : DependencyObject
+    {
+        if (dependencyObject == null)
+            yield break;
+
+        int childCount =
+            VisualTreeHelper.GetChildrenCount(dependencyObject);
+
+        for (int i = 0; i < childCount; i++)
+        {
+            DependencyObject child =
+                VisualTreeHelper.GetChild(
+                    dependencyObject,
+                    i);
+
+            if (child is T typedChild)
+            {
+                yield return typedChild;
+            }
+
+            foreach (T descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
+
+
+    // ============================================================
+    // SELECT FOLDER
+    // ============================================================
+
     private void SelectFolderButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -49,34 +110,70 @@ public partial class MainWindow : Window
             Title = "Select a folder"
         };
 
-        if (dialog.ShowDialog() == true)
+        // Open the native Windows folder picker.
+        if (dialog.ShowDialog() != true)
         {
-            string selectedFolder = dialog.FolderName;
-
-            SelectedFolderText.Text = selectedFolder;
-
-            LoadFiles(selectedFolder);
+            return;
         }
+
+        string selectedFolder = dialog.FolderName;
+
+        if (string.IsNullOrWhiteSpace(selectedFolder))
+        {
+            return;
+        }
+
+        // Update the selected folder displayed in the UI.
+        SelectedFolderText.Text = selectedFolder;
+
+        // Load the files from the selected folder.
+        LoadFiles(selectedFolder);
     }
+
+
+    // ============================================================
+    // LOAD FILES
+    // ============================================================
 
     private void LoadFiles(string folderPath)
     {
-        var files = _fileService.GetFiles(folderPath);
-
-        var displayItems = files.Select(file => new FileDisplayItem
+        try
         {
-            Name = file.Name,
-            FileType = file.FileType,
-            Size = FormatFileSize(file.SizeInBytes),
-            Modified = file.Modified.ToString("yyyy-MM-dd HH:mm")
-        }).ToList();
+            var files = _fileService.GetFiles(folderPath);
 
-        FilesDataGrid.ItemsSource = displayItems;
+            var displayItems = files
+                .Select(file => new FileDisplayItem
+                {
+                    Name = file.Name,
+                    FileType = file.FileType,
+                    Size = FormatFileSize(file.SizeInBytes),
+                    Modified = file.Modified.ToString("yyyy-MM-dd HH:mm")
+                })
+                .ToList();
 
-        FileCountText.Text = displayItems.Count == 1
-            ? "1 file"
-            : $"{displayItems.Count} files";
+            FilesDataGrid.ItemsSource = displayItems;
+
+            FileCountText.Text = displayItems.Count == 1
+                ? "1 file"
+                : $"{displayItems.Count} files";
+        }
+        catch (Exception ex)
+        {
+            FilesDataGrid.ItemsSource = null;
+            FileCountText.Text = "0 files";
+
+            MessageBox.Show(
+                $"Unable to load files from the selected folder.\n\n{ex.Message}",
+                "Unable to Load Files",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
+
+
+    // ============================================================
+    // ORGANIZE FILES
+    // ============================================================
 
     private void OrganizeFilesButton_Click(
         object sender,
@@ -142,8 +239,14 @@ public partial class MainWindow : Window
 
         ShowOrganizationResult(result);
 
+        // Refresh the file list after organization.
         LoadFiles(folderPath);
     }
+
+
+    // ============================================================
+    // UNDO
+    // ============================================================
 
     private void UndoButton_Click(
         object sender,
@@ -194,8 +297,14 @@ public partial class MainWindow : Window
 
         ShowUndoResult(result);
 
+        // Refresh the file list after undo.
         LoadFiles(folderPath);
     }
+
+
+    // ============================================================
+    // ORGANIZATION RESULT
+    // ============================================================
 
     private void ShowOrganizationResult(
         OrganizationResult result)
@@ -224,6 +333,11 @@ public partial class MainWindow : Window
                 : MessageBoxImage.Information);
     }
 
+
+    // ============================================================
+    // UNDO RESULT
+    // ============================================================
+
     private void ShowUndoResult(
         UndoResult result)
     {
@@ -251,20 +365,36 @@ public partial class MainWindow : Window
                 : MessageBoxImage.Information);
     }
 
+
+    // ============================================================
+    // FILE SIZE FORMATTING
+    // ============================================================
+
     private static string FormatFileSize(long bytes)
     {
         if (bytes < 1024)
+        {
             return $"{bytes} B";
+        }
 
         if (bytes < 1024 * 1024)
+        {
             return $"{bytes / 1024.0:F1} KB";
+        }
 
         if (bytes < 1024 * 1024 * 1024)
+        {
             return $"{bytes / (1024.0 * 1024.0):F1} MB";
+        }
 
         return $"{bytes / (1024.0 * 1024.0 * 1024.0):F1} GB";
     }
 }
+
+
+// ================================================================
+// FILE DISPLAY MODEL
+// ================================================================
 
 public class FileDisplayItem
 {
