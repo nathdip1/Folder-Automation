@@ -33,3 +33,9 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Generated publish output
+publish/
+
+# Generated installer output
+installer-output/
