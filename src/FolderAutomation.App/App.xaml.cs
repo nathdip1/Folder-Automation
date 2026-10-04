@@ -10,8 +10,17 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        Resources.MergedDictionaries.Add(
+            new ResourceDictionary
+            {
+                Source = new Uri(
+                    "Themes/Theme.xaml",
+                    UriKind.Relative)
+            });
+
         string applicationDataFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
             "FolderAutomation");
 
         Directory.CreateDirectory(applicationDataFolder);
@@ -20,7 +29,8 @@ public partial class App : Application
             applicationDataFolder,
             "FolderAutomation.db");
 
-        var databaseInitializer = new DatabaseInitializer(databasePath);
+        var databaseInitializer = new DatabaseInitializer(
+            databasePath);
 
         databaseInitializer.Initialize();
     }
