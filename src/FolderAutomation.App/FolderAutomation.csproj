@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FolderAutomation.Core\FolderAutomation.Core.csproj" />
+    <ProjectReference Include="..\FolderAutomation.Data\FolderAutomation.Data.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
