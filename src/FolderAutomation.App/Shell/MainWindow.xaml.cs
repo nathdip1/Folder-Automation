@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -30,14 +31,25 @@ public partial class MainWindow : Window
         {
             FolderOrganizerViewControl.Visibility = Visibility.Visible;
             FileConverterViewControl.Visibility = Visibility.Collapsed;
+            FileCleanerViewControl.Visibility = Visibility.Collapsed;
         }
         else if (string.Equals(
                      expandedExpander.Header?.ToString(),
                      "File Converter",
-                     System.StringComparison.Ordinal))
+                     StringComparison.Ordinal))
         {
             FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
             FileConverterViewControl.Visibility = Visibility.Visible;
+            FileCleanerViewControl.Visibility = Visibility.Collapsed;
+        }
+        else if (string.Equals(
+                     expandedExpander.Header?.ToString(),
+                     "File Cleaner",
+                     StringComparison.Ordinal))
+        {
+            FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
+            FileConverterViewControl.Visibility = Visibility.Collapsed;
+            FileCleanerViewControl.Visibility = Visibility.Visible;
         }
     }
 

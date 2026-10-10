@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:folderOrganizer="clr-namespace:FolderAutomation.Features.FolderOrganizer"
         xmlns:fileConverter="clr-namespace:FolderAutomation.Features.FileConverter"
+        xmlns:fileCleaner="clr-namespace:FolderAutomation.Features.FileCleaner"
         Title="Folder Automation"
         Icon="/FolderAutomation;component/Assets/app.ico"
         Height="760"
@@ -256,17 +257,17 @@
                                 </StackPanel>
                             </Expander>
 
-                            <!-- File Cleaner placeholder -->
+                            <!-- File Cleaner -->
                             <Expander Header="File Cleaner"
                                       Expanded="FeatureExpander_Expanded"
                                       Style="{StaticResource FeatureExpanderStyle}"
                                       Margin="0,0,0,8">
                                 <StackPanel Margin="14">
-                                    <TextBlock Text="Find and clean unnecessary files."
+                                    <TextBlock Text="Review and clean eligible temporary files."
                                                FontSize="12"
                                                Foreground="{StaticResource SecondaryTextBrush}"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Text="Coming soon"
+                                    <TextBlock Text="Scan files before cleanup."
                                                Margin="0,10,0,0"
                                                FontSize="12"
                                                FontWeight="SemiBold"
@@ -300,6 +301,10 @@
 
                 <fileConverter:FileConverterView
                     x:Name="FileConverterViewControl"
+                    Visibility="Collapsed"/>
+
+                <fileCleaner:FileCleanerView
+                    x:Name="FileCleanerViewControl"
                     Visibility="Collapsed"/>
 
             </Grid>
