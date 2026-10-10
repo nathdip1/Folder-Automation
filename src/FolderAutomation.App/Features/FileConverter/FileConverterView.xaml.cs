@@ -1,3 +1,4 @@
+
 using System;
 using System.Globalization;
 using System.IO;
@@ -115,7 +116,6 @@ public partial class FileConverterView : UserControl
             return;
         }
 
-        // Every click starts a fresh attempt using the current settings.
         _currentResult = null;
         _viewModel.ProcessingResult = null;
 
@@ -172,6 +172,8 @@ public partial class FileConverterView : UserControl
             _viewModel.ProcessingResult = null;
 
             ProcessedImagePreview.Source = null;
+            ProcessedImageDetailsText.Text = string.Empty;
+            ValidationResultText.Text = string.Empty;
             ResultPanel.Visibility = Visibility.Collapsed;
             SaveOutputButton.IsEnabled = false;
 
@@ -188,6 +190,66 @@ public partial class FileConverterView : UserControl
             _viewModel.IsProcessing = false;
             ProcessImageButton.IsEnabled = true;
         }
+    }
+
+    private void ResetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsProcessing)
+            return;
+
+        // Clear the current selection and result references.
+        _selectedFilePath = null;
+        _currentResult = null;
+
+        _viewModel.SelectedImage = null;
+        _viewModel.ProcessingResult = null;
+        _viewModel.SelectedMode = ImageProcessingMode.MinMaxLimits;
+        _viewModel.StatusMessage = "Select an image to get started.";
+
+        // Clear the selected image display.
+        SelectedImagePreview.Source = null;
+        SelectedImagePreview.Visibility = Visibility.Collapsed;
+
+        SelectedImageNameText.Text = string.Empty;
+        SelectedImageNameText.Visibility = Visibility.Collapsed;
+
+        SelectedImageDetailsText.Text = string.Empty;
+        SelectedImageDetailsText.Visibility = Visibility.Collapsed;
+
+        // Clear every resolution and file-size input.
+        MinWidthTextBox.Clear();
+        MinHeightTextBox.Clear();
+        MaxWidthTextBox.Clear();
+        MaxHeightTextBox.Clear();
+
+        MinFileSizeTextBox.Clear();
+        MaxFileSizeTextBox.Clear();
+        TargetWidthTextBox.Clear();
+        TargetHeightTextBox.Clear();
+        TargetFileSizeTextBox.Clear();
+
+        // Restore all size units to KB.
+        MinFileSizeUnitComboBox.SelectedIndex = 0;
+        MaxFileSizeUnitComboBox.SelectedIndex = 0;
+        TargetFileSizeUnitComboBox.SelectedIndex = 0;
+
+        // Restore the default processing mode and output format.
+        MinMaxModeRadio.IsChecked = true;
+        ExactTargetModeRadio.IsChecked = false;
+        OutputFormatComboBox.SelectedIndex = 0;
+
+        MinMaxSettingsPanel.Visibility = Visibility.Visible;
+        ExactTargetSettingsPanel.Visibility = Visibility.Collapsed;
+
+        // Clear the processed result and validation feedback.
+        ProcessedImagePreview.Source = null;
+        ProcessedImageDetailsText.Text = string.Empty;
+        ValidationResultText.Text = string.Empty;
+        ResultPanel.Visibility = Visibility.Collapsed;
+        SaveOutputButton.IsEnabled = false;
+
+        ProcessImageButton.IsEnabled = true;
+        StatusMessageText.Text = _viewModel.StatusMessage;
     }
 
     private void SaveOutputButton_Click(object sender, RoutedEventArgs e)
