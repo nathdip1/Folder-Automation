@@ -27,16 +27,14 @@ public class OrganizationService
                 string sourcePath = Path.GetFullPath(
                     Path.Combine(normalizedFolderPath, item.File.Name));
 
-                string destinationPath = string.IsNullOrWhiteSpace(
-                    item.DestinationPath)
+                string destinationPath = string.IsNullOrWhiteSpace(item.DestinationPath)
                     ? Path.Combine(
                         normalizedFolderPath,
                         item.DestinationFolderName,
                         item.File.Name)
                     : Path.GetFullPath(item.DestinationPath);
 
-                string destinationFolder =
-                    Path.GetDirectoryName(destinationPath)
+                string destinationFolder = Path.GetDirectoryName(destinationPath)
                     ?? throw new InvalidOperationException(
                         "The destination folder could not be determined.");
 
@@ -47,15 +45,17 @@ public class OrganizationService
                     continue;
                 }
 
+                // Keep the action resolved for this specific file. In Ask mode,
+                // the callback may return a different action for each conflict,
+                // or remember an action for all remaining conflicts.
+                FileConflictAction resolvedAction = conflictAction;
+
                 if (File.Exists(destinationPath))
                 {
-                    FileConflictAction resolvedAction = conflictAction;
-
                     if (conflictAction == FileConflictAction.Ask)
                     {
-                        resolvedAction = askHandler?.Invoke(
-                            item,
-                            destinationPath) ?? FileConflictAction.Skip;
+                        resolvedAction = askHandler?.Invoke(item, destinationPath)
+                            ?? FileConflictAction.Skip;
                     }
 
                     if (resolvedAction == FileConflictAction.Cancel)
@@ -78,10 +78,8 @@ public class OrganizationService
                             continue;
 
                         case FileConflictAction.Rename:
-                            destinationPath = GetUniqueDestinationPath(
-                                destinationPath);
-                            destinationFolder =
-                                Path.GetDirectoryName(destinationPath)
+                            destinationPath = GetUniqueDestinationPath(destinationPath);
+                            destinationFolder = Path.GetDirectoryName(destinationPath)
                                 ?? throw new InvalidOperationException(
                                     "The destination folder could not be determined.");
                             break;
@@ -104,11 +102,11 @@ public class OrganizationService
 
                 try
                 {
+                    // A destination may have appeared after the first check.
+                    // Only Replace is allowed to overwrite that destination.
                     if (File.Exists(destinationPath))
                     {
-                        if (conflictAction != FileConflictAction.Replace &&
-                            !(conflictAction == FileConflictAction.Ask &&
-                              askHandler != null))
+                        if (resolvedAction != FileConflictAction.Replace)
                         {
                             result.SkippedFiles.Add(
                                 $"Destination appeared during processing: {item.File.Name}");
@@ -116,7 +114,6 @@ public class OrganizationService
                         }
 
                         backupPath = GetUniqueBackupPath(destinationFolder);
-
                         File.Move(destinationPath, backupPath);
                         destinationBackedUp = true;
                     }
@@ -138,8 +135,8 @@ public class OrganizationService
                 }
                 catch
                 {
-                    // Roll back filesystem changes if the operation or
-                    // its Undo record could not be completed.
+                    // Roll back filesystem changes if the move or its Undo
+                    // record could not be completed.
                     if (incomingFileMoved &&
                         File.Exists(destinationPath) &&
                         !File.Exists(sourcePath))
@@ -159,8 +156,7 @@ public class OrganizationService
             }
             catch (Exception ex)
             {
-                result.FailedFiles.Add(
-                    $"{item.File.Name}: {ex.Message}");
+                result.FailedFiles.Add($"{item.File.Name}: {ex.Message}");
             }
         }
 
@@ -186,7 +182,6 @@ public class OrganizationService
             candidatePath = Path.Combine(
                 directory,
                 $"{fileNameWithoutExtension} ({counter}){extension}");
-
             counter++;
         }
         while (File.Exists(candidatePath) || Directory.Exists(candidatePath));

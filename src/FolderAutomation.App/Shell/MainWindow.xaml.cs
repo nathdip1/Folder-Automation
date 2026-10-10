@@ -24,6 +24,10 @@ public partial class MainWindow : Window
     private string? _pendingOrganizationFolderPath;
     private FileConflictAction _pendingConflictAction = FileConflictAction.Ask;
 
+    // These values are reset for each organization execution.
+    private bool _applyConflictActionToRemaining;
+    private FileConflictAction _rememberedConflictAction = FileConflictAction.Skip;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -332,6 +336,10 @@ public partial class MainWindow : Window
 
         try
         {
+            // The "apply to all" choice is limited to this execution.
+            _applyConflictActionToRemaining = false;
+            _rememberedConflictAction = FileConflictAction.Skip;
+
             var result = _organizationService.Organize(
                 folderPath,
                 _pendingOrganizationPlan,
@@ -468,19 +476,27 @@ public partial class MainWindow : Window
         OrganizationItem item,
         string destinationPath)
     {
+        // Reuse the user's choice when they selected "do this for all".
+        if (_applyConflictActionToRemaining)
+        {
+            return _rememberedConflictAction;
+        }
+
         var dialog = new Window
         {
             Title = "Destination File Already Exists",
-            Width = 590,
-            Height = 255,
-            MinWidth = 590,
-            MinHeight = 255,
-            MaxWidth = 590,
-            MaxHeight = 255,
+            Width = 610,
+            Height = 310,
+            MinWidth = 610,
+            MinHeight = 310,
+            MaxWidth = 610,
+            MaxHeight = 310,
             ResizeMode = ResizeMode.NoResize,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = this,
-            ShowInTaskbar = false
+            ShowInTaskbar = false,
+            Background = SystemColors.WindowBrush,
+            Foreground = SystemColors.WindowTextBrush
         };
 
         var root = new StackPanel
@@ -501,8 +517,18 @@ public partial class MainWindow : Window
             Text = destinationPath,
             TextWrapping = TextWrapping.Wrap,
             FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 18)
+            Margin = new Thickness(0, 0, 0, 14)
         });
+
+        var applyToAllCheckBox = new CheckBox
+        {
+            Content = "Do this for all remaining conflicts",
+            Margin = new Thickness(0, 0, 0, 18),
+            FontSize = 13,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+
+        root.Children.Add(applyToAllCheckBox);
 
         var buttons = new StackPanel
         {
@@ -517,8 +543,8 @@ public partial class MainWindow : Window
             var button = new Button
             {
                 Content = caption,
-                MinWidth = 82,
-                Height = 34,
+                MinWidth = caption == "Cancel remaining" ? 118 : 82,
+                Height = 36,
                 Margin = new Thickness(6, 0, 0, 0),
                 Padding = new Thickness(8, 0, 8, 0)
             };
@@ -540,6 +566,15 @@ public partial class MainWindow : Window
         root.Children.Add(buttons);
         dialog.Content = root;
         dialog.ShowDialog();
+
+        if (applyToAllCheckBox.IsChecked == true &&
+            selectedAction is FileConflictAction.Rename
+                or FileConflictAction.Skip
+                or FileConflictAction.Replace)
+        {
+            _rememberedConflictAction = selectedAction;
+            _applyConflictActionToRemaining = true;
+        }
 
         return selectedAction;
     }
