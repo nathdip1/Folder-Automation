@@ -13,11 +13,22 @@ public class OrganizationPlanner
         string folderPath,
         IReadOnlyList<FileItem> files)
     {
+        string normalizedFolderPath = Path.GetFullPath(folderPath);
+
         return files
-            .Select(file => new OrganizationItem
+            .Select(file =>
             {
-                File = file,
-                Category = _categorizer.Categorize(file.FileType)
+                var category = _categorizer.Categorize(file.FileType);
+
+                return new OrganizationItem
+                {
+                    File = file,
+                    Category = category,
+                    DestinationPath = Path.Combine(
+                        normalizedFolderPath,
+                        category.ToString(),
+                        file.Name)
+                };
             })
             .ToList();
     }

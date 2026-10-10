@@ -7,4 +7,6 @@ public class OrganizationItem
     public FileCategory Category { get; set; }
 
     public string DestinationFolderName => Category.ToString();
+
+    public string DestinationPath { get; set; } = string.Empty;
 }

@@ -15,37 +15,29 @@ public class OrganizationService
     {
         var result = new OrganizationResult();
 
-        // One OperationId represents one complete Organize action.
         string operationId = Guid.NewGuid().ToString();
-
-        string normalizedFolderPath =
-            new DirectoryInfo(folderPath).FullName;
+        string normalizedFolderPath = Path.GetFullPath(folderPath);
 
         foreach (var item in plan)
         {
             try
             {
                 string sourcePath = Path.Combine(
-                    folderPath,
+                    normalizedFolderPath,
                     item.File.Name);
 
-                string destinationFolder = Path.Combine(
-                    folderPath,
-                    item.DestinationFolderName);
+                string destinationPath = string.IsNullOrWhiteSpace(
+                    item.DestinationPath)
+                    ? Path.Combine(
+                        normalizedFolderPath,
+                        item.DestinationFolderName,
+                        item.File.Name)
+                    : Path.GetFullPath(item.DestinationPath);
 
-                Directory.CreateDirectory(destinationFolder);
-
-                string destinationPath = Path.Combine(
-                    destinationFolder,
-                    item.File.Name);
-
-                if (File.Exists(destinationPath))
-                {
-                    result.SkippedFiles.Add(
-                        $"Skipped because the file already exists: {item.File.Name}");
-
-                    continue;
-                }
+                string destinationFolder =
+                    Path.GetDirectoryName(destinationPath)
+                    ?? throw new InvalidOperationException(
+                        "The destination folder could not be determined.");
 
                 if (!File.Exists(sourcePath))
                 {
@@ -55,16 +47,26 @@ public class OrganizationService
                     continue;
                 }
 
+                if (File.Exists(destinationPath))
+                {
+                    result.SkippedFiles.Add(
+                        $"Skipped because the destination file already exists: {item.File.Name}");
+
+                    continue;
+                }
+
+                Directory.CreateDirectory(destinationFolder);
+
                 File.Move(sourcePath, destinationPath);
 
                 _undoRecorder.Record(new UndoOperation
-{
-    OperationId = operationId,
-    FolderPath = folderPath,
-    OriginalPath = sourcePath,
-    NewPath = destinationPath,
-    ExecutedAt = DateTime.UtcNow
-});
+                {
+                    OperationId = operationId,
+                    FolderPath = normalizedFolderPath,
+                    OriginalPath = sourcePath,
+                    NewPath = destinationPath,
+                    ExecutedAt = DateTime.UtcNow
+                });
 
                 result.MovedFiles.Add(item.File.Name);
             }

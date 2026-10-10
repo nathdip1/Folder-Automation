@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using FolderAutomation.Core;
 using FolderAutomation.Data;
+using FolderAutomation.Features.OrganizationPreview;
 
 namespace FolderAutomation;
 
@@ -17,6 +18,10 @@ public partial class MainWindow : Window
     private readonly OrganizationService _organizationService;
     private readonly UndoRepository _undoRepository;
     private readonly UndoService _undoService;
+
+    // Keeps the exact plan displayed in the preview until it is executed or cancelled.
+    private IReadOnlyList<OrganizationItem>? _pendingOrganizationPlan;
+    private string? _pendingOrganizationFolderPath;
 
     public MainWindow()
     {
@@ -126,7 +131,7 @@ public partial class MainWindow : Window
         // Update the selected folder displayed in the UI.
         SelectedFolderText.Text = selectedFolder;
 
-        // Load the files from the selected folder.
+        // Load the files from the selected folder and dismiss any old preview.
         LoadFiles(selectedFolder);
     }
 
@@ -137,6 +142,17 @@ public partial class MainWindow : Window
 
     private void LoadFiles(string folderPath)
     {
+        // A refreshed file list invalidates any previous preview.
+        _pendingOrganizationPlan = null;
+        _pendingOrganizationFolderPath = null;
+
+        FilesDataGrid.Visibility = Visibility.Visible;
+        OrganizationPreviewGrid.Visibility = Visibility.Collapsed;
+        PreviewActionsPanel.Visibility = Visibility.Collapsed;
+
+        ResultsTitleText.Text = "Files";
+        ResultsSubtitleText.Text = "Files found in the selected folder";
+
         try
         {
             var files = _fileService.GetFiles(folderPath);
@@ -172,7 +188,7 @@ public partial class MainWindow : Window
 
 
     // ============================================================
-    // ORGANIZE FILES
+    // ORGANIZE FILES - BUILD DETAILED PREVIEW
     // ============================================================
 
     private void OrganizeFilesButton_Click(
@@ -193,54 +209,156 @@ public partial class MainWindow : Window
 
         string folderPath = SelectedFolderText.Text;
 
-        var files = _fileService.GetFiles(folderPath);
+        try
+        {
+            var files = _fileService.GetFiles(folderPath);
 
-        if (files.Count == 0)
+            if (files.Count == 0)
+            {
+                MessageBox.Show(
+                    "There are no files to organize.",
+                    "Nothing to Organize",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                return;
+            }
+
+            var plan = _organizationPlanner.CreatePlan(
+                folderPath,
+                files);
+
+            _pendingOrganizationPlan = plan;
+            _pendingOrganizationFolderPath = Path.GetFullPath(folderPath);
+
+            var previewRows = plan
+                .Select(item => new OrganizationPreviewRow
+                {
+                    FileName = item.File.Name,
+                    Category = item.Category.ToString(),
+                    DestinationPath = item.DestinationPath
+                })
+                .ToList();
+
+            OrganizationPreviewGrid.ItemsSource = previewRows;
+
+            FilesDataGrid.Visibility = Visibility.Collapsed;
+            OrganizationPreviewGrid.Visibility = Visibility.Visible;
+            PreviewActionsPanel.Visibility = Visibility.Visible;
+
+            ResultsTitleText.Text = "Organization Preview";
+            ResultsSubtitleText.Text =
+                "Review each planned destination before moving files";
+
+            FileCountText.Text = $"{plan.Count} planned";
+
+            PreviewSummaryText.Text =
+                $"{plan.Count} file(s) planned. Review the destination paths, " +
+                "then execute or cancel the operation.";
+        }
+        catch (Exception ex)
+        {
+            _pendingOrganizationPlan = null;
+            _pendingOrganizationFolderPath = null;
+
+            MessageBox.Show(
+                $"Unable to create the organization preview.\n\n{ex.Message}",
+                "Preview Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+
+    // ============================================================
+    // EXECUTE ORGANIZATION PREVIEW
+    // ============================================================
+
+    private void ExecuteOrganizationButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_pendingOrganizationPlan == null ||
+            string.IsNullOrWhiteSpace(_pendingOrganizationFolderPath))
         {
             MessageBox.Show(
-                "There are no files to organize.",
-                "Nothing to Organize",
+                "There is no organization preview to execute.",
+                "No Preview",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
 
             return;
         }
 
-        var plan = _organizationPlanner.CreatePlan(
-            folderPath,
-            files);
+        string folderPath = _pendingOrganizationFolderPath;
 
-        var summary = plan
-            .GroupBy(item => item.Category)
-            .OrderBy(group => group.Key.ToString())
-            .Select(group =>
-                $"{group.Key}: {group.Count()} files")
-            .ToList();
-
-        string previewMessage =
-            "The following files will be organized:\n\n" +
-            string.Join("\n", summary) +
-            "\n\nDo you want to continue?";
-
-        MessageBoxResult confirmation = MessageBox.Show(
-            previewMessage,
-            "Organization Preview",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (confirmation != MessageBoxResult.Yes)
+        // Re-check the selected folder to prevent running a stale preview
+        // after the user has changed the folder selection.
+        if (!string.Equals(
+                Path.GetFullPath(SelectedFolderText.Text),
+                folderPath,
+                StringComparison.OrdinalIgnoreCase))
         {
+            MessageBox.Show(
+                "The selected folder has changed. Create a new preview before organizing.",
+                "Preview Is Out of Date",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            LoadFiles(SelectedFolderText.Text);
             return;
         }
 
-        var result = _organizationService.Organize(
-            folderPath,
-            plan);
+        try
+        {
+            var result = _organizationService.Organize(
+                folderPath,
+                _pendingOrganizationPlan);
 
-        ShowOrganizationResult(result);
+            ShowOrganizationResult(result);
 
-        // Refresh the file list after organization.
-        LoadFiles(folderPath);
+            // Refresh the file list and clear the completed preview.
+            LoadFiles(folderPath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Unable to complete the organization operation.\n\n{ex.Message}",
+                "Organization Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+
+    // ============================================================
+    // CANCEL ORGANIZATION PREVIEW
+    // ============================================================
+
+    private void CancelPreviewButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedFolderText.Text) &&
+            SelectedFolderText.Text != "No folder selected")
+        {
+            LoadFiles(SelectedFolderText.Text);
+        }
+        else
+        {
+            _pendingOrganizationPlan = null;
+            _pendingOrganizationFolderPath = null;
+
+            OrganizationPreviewGrid.ItemsSource = null;
+            OrganizationPreviewGrid.Visibility = Visibility.Collapsed;
+            PreviewActionsPanel.Visibility = Visibility.Collapsed;
+            FilesDataGrid.Visibility = Visibility.Visible;
+
+            ResultsTitleText.Text = "Files";
+            ResultsSubtitleText.Text =
+                "Files found in the selected folder";
+            FileCountText.Text = "0 files";
+        }
     }
 
 
