@@ -11,7 +11,9 @@ public class OrganizationService
 
     public OrganizationResult Organize(
         string folderPath,
-        IReadOnlyList<OrganizationItem> plan)
+        IReadOnlyList<OrganizationItem> plan,
+        FileConflictAction conflictAction = FileConflictAction.Skip,
+        Func<OrganizationItem, string, FileConflictAction>? askHandler = null)
     {
         var result = new OrganizationResult();
 
@@ -22,9 +24,8 @@ public class OrganizationService
         {
             try
             {
-                string sourcePath = Path.Combine(
-                    normalizedFolderPath,
-                    item.File.Name);
+                string sourcePath = Path.GetFullPath(
+                    Path.Combine(normalizedFolderPath, item.File.Name));
 
                 string destinationPath = string.IsNullOrWhiteSpace(
                     item.DestinationPath)
@@ -43,32 +44,118 @@ public class OrganizationService
                 {
                     result.SkippedFiles.Add(
                         $"File no longer exists: {item.File.Name}");
-
                     continue;
                 }
 
                 if (File.Exists(destinationPath))
                 {
-                    result.SkippedFiles.Add(
-                        $"Skipped because the destination file already exists: {item.File.Name}");
+                    FileConflictAction resolvedAction = conflictAction;
 
-                    continue;
+                    if (conflictAction == FileConflictAction.Ask)
+                    {
+                        resolvedAction = askHandler?.Invoke(
+                            item,
+                            destinationPath) ?? FileConflictAction.Skip;
+                    }
+
+                    if (resolvedAction == FileConflictAction.Cancel)
+                    {
+                        result.SkippedFiles.Add(
+                            $"Operation cancelled before processing: {item.File.Name}");
+                        break;
+                    }
+
+                    switch (resolvedAction)
+                    {
+                        case FileConflictAction.Ask:
+                            result.SkippedFiles.Add(
+                                $"No conflict resolution was selected: {item.File.Name}");
+                            continue;
+
+                        case FileConflictAction.Skip:
+                            result.SkippedFiles.Add(
+                                $"Skipped because the destination file already exists: {item.File.Name}");
+                            continue;
+
+                        case FileConflictAction.Rename:
+                            destinationPath = GetUniqueDestinationPath(
+                                destinationPath);
+                            destinationFolder =
+                                Path.GetDirectoryName(destinationPath)
+                                ?? throw new InvalidOperationException(
+                                    "The destination folder could not be determined.");
+                            break;
+
+                        case FileConflictAction.Replace:
+                            break;
+
+                        default:
+                            result.FailedFiles.Add(
+                                $"{item.File.Name}: Unsupported conflict action.");
+                            continue;
+                    }
                 }
 
                 Directory.CreateDirectory(destinationFolder);
 
-                File.Move(sourcePath, destinationPath);
+                string backupPath = string.Empty;
+                bool destinationBackedUp = false;
+                bool incomingFileMoved = false;
 
-                _undoRecorder.Record(new UndoOperation
+                try
                 {
-                    OperationId = operationId,
-                    FolderPath = normalizedFolderPath,
-                    OriginalPath = sourcePath,
-                    NewPath = destinationPath,
-                    ExecutedAt = DateTime.UtcNow
-                });
+                    if (File.Exists(destinationPath))
+                    {
+                        if (conflictAction != FileConflictAction.Replace &&
+                            !(conflictAction == FileConflictAction.Ask &&
+                              askHandler != null))
+                        {
+                            result.SkippedFiles.Add(
+                                $"Destination appeared during processing: {item.File.Name}");
+                            continue;
+                        }
 
-                result.MovedFiles.Add(item.File.Name);
+                        backupPath = GetUniqueBackupPath(destinationFolder);
+
+                        File.Move(destinationPath, backupPath);
+                        destinationBackedUp = true;
+                    }
+
+                    File.Move(sourcePath, destinationPath);
+                    incomingFileMoved = true;
+
+                    _undoRecorder.Record(new UndoOperation
+                    {
+                        OperationId = operationId,
+                        FolderPath = normalizedFolderPath,
+                        OriginalPath = sourcePath,
+                        NewPath = destinationPath,
+                        ExecutedAt = DateTime.UtcNow,
+                        ReplacedFileBackupPath = backupPath
+                    });
+
+                    result.MovedFiles.Add(item.File.Name);
+                }
+                catch
+                {
+                    // Roll back filesystem changes if the operation or
+                    // its Undo record could not be completed.
+                    if (incomingFileMoved &&
+                        File.Exists(destinationPath) &&
+                        !File.Exists(sourcePath))
+                    {
+                        File.Move(destinationPath, sourcePath);
+                    }
+
+                    if (destinationBackedUp &&
+                        File.Exists(backupPath) &&
+                        !File.Exists(destinationPath))
+                    {
+                        File.Move(backupPath, destinationPath);
+                    }
+
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -78,5 +165,47 @@ public class OrganizationService
         }
 
         return result;
+    }
+
+    private static string GetUniqueDestinationPath(string destinationPath)
+    {
+        string directory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException(
+                "The destination folder could not be determined.");
+
+        string fileNameWithoutExtension =
+            Path.GetFileNameWithoutExtension(destinationPath);
+
+        string extension = Path.GetExtension(destinationPath);
+
+        int counter = 1;
+        string candidatePath;
+
+        do
+        {
+            candidatePath = Path.Combine(
+                directory,
+                $"{fileNameWithoutExtension} ({counter}){extension}");
+
+            counter++;
+        }
+        while (File.Exists(candidatePath) || Directory.Exists(candidatePath));
+
+        return candidatePath;
+    }
+
+    private static string GetUniqueBackupPath(string destinationFolder)
+    {
+        string backupPath;
+
+        do
+        {
+            backupPath = Path.Combine(
+                destinationFolder,
+                $".folderautomation-backup-{Guid.NewGuid():N}.bak");
+        }
+        while (File.Exists(backupPath) || Directory.Exists(backupPath));
+
+        return backupPath;
     }
 }

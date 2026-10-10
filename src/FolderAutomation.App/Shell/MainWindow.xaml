@@ -384,6 +384,25 @@
 
                                                Margin="0,18,0,8"/>
 
+                                    <TextBlock Text="WHEN A DESTINATION FILE ALREADY EXISTS"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource SecondaryTextBrush}"
+                                               Margin="0,0,0,6"/>
+
+                                    <ComboBox x:Name="ConflictActionComboBox"
+                                              Height="36"
+                                              SelectedIndex="0"
+                                              Padding="8,5"
+                                              Background="{StaticResource SurfaceBrush}"
+                                              Foreground="{StaticResource PrimaryTextBrush}"
+                                              BorderBrush="{StaticResource BorderBrush}">
+                                        <ComboBoxItem Content="Ask me each time"/>
+                                        <ComboBoxItem Content="Rename incoming file"/>
+                                        <ComboBoxItem Content="Skip incoming file"/>
+                                        <ComboBoxItem Content="Replace existing file"/>
+                                    </ComboBox>
+
                                     <Button Content="Organize Files"
 
                                             Height="40"

@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     // Keeps the exact plan displayed in the preview until it is executed or cancelled.
     private IReadOnlyList<OrganizationItem>? _pendingOrganizationPlan;
     private string? _pendingOrganizationFolderPath;
+    private FileConflictAction _pendingConflictAction = FileConflictAction.Ask;
 
     public MainWindow()
     {
@@ -145,6 +146,8 @@ public partial class MainWindow : Window
         // A refreshed file list invalidates any previous preview.
         _pendingOrganizationPlan = null;
         _pendingOrganizationFolderPath = null;
+        _pendingConflictAction = FileConflictAction.Ask;
+        ConflictActionComboBox.IsEnabled = true;
 
         FilesDataGrid.Visibility = Visibility.Visible;
         OrganizationPreviewGrid.Visibility = Visibility.Collapsed;
@@ -228,8 +231,24 @@ public partial class MainWindow : Window
                 folderPath,
                 files);
 
+            _pendingConflictAction = GetSelectedConflictAction();
+
+            if (_pendingConflictAction == FileConflictAction.Rename)
+            {
+                foreach (var item in plan)
+                {
+                    if (File.Exists(item.DestinationPath) ||
+                        Directory.Exists(item.DestinationPath))
+                    {
+                        item.DestinationPath = GetUniqueDestinationPath(
+                            item.DestinationPath);
+                    }
+                }
+            }
+
             _pendingOrganizationPlan = plan;
             _pendingOrganizationFolderPath = Path.GetFullPath(folderPath);
+            ConflictActionComboBox.IsEnabled = false;
 
             var previewRows = plan
                 .Select(item => new OrganizationPreviewRow
@@ -260,6 +279,8 @@ public partial class MainWindow : Window
         {
             _pendingOrganizationPlan = null;
             _pendingOrganizationFolderPath = null;
+            _pendingConflictAction = FileConflictAction.Ask;
+            ConflictActionComboBox.IsEnabled = true;
 
             MessageBox.Show(
                 $"Unable to create the organization preview.\n\n{ex.Message}",
@@ -313,7 +334,9 @@ public partial class MainWindow : Window
         {
             var result = _organizationService.Organize(
                 folderPath,
-                _pendingOrganizationPlan);
+                _pendingOrganizationPlan,
+                _pendingConflictAction,
+                ResolveFileConflict);
 
             ShowOrganizationResult(result);
 
@@ -348,6 +371,8 @@ public partial class MainWindow : Window
         {
             _pendingOrganizationPlan = null;
             _pendingOrganizationFolderPath = null;
+            _pendingConflictAction = FileConflictAction.Ask;
+            ConflictActionComboBox.IsEnabled = true;
 
             OrganizationPreviewGrid.ItemsSource = null;
             OrganizationPreviewGrid.Visibility = Visibility.Collapsed;
@@ -417,6 +442,133 @@ public partial class MainWindow : Window
 
         // Refresh the file list after undo.
         LoadFiles(folderPath);
+    }
+
+
+    // ============================================================
+    // DUPLICATE FILE CONFLICT HANDLING
+    // ============================================================
+
+    private FileConflictAction GetSelectedConflictAction()
+    {
+        string selectedText =
+            (ConflictActionComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString()
+            ?? "Ask me each time";
+
+        return selectedText switch
+        {
+            "Rename incoming file" => FileConflictAction.Rename,
+            "Skip incoming file" => FileConflictAction.Skip,
+            "Replace existing file" => FileConflictAction.Replace,
+            _ => FileConflictAction.Ask
+        };
+    }
+
+    private FileConflictAction ResolveFileConflict(
+        OrganizationItem item,
+        string destinationPath)
+    {
+        var dialog = new Window
+        {
+            Title = "Destination File Already Exists",
+            Width = 590,
+            Height = 255,
+            MinWidth = 590,
+            MinHeight = 255,
+            MaxWidth = 590,
+            MaxHeight = 255,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            ShowInTaskbar = false
+        };
+
+        var root = new StackPanel
+        {
+            Margin = new Thickness(20)
+        };
+
+        root.Children.Add(new TextBlock
+        {
+            Text = $"A file already exists at the planned destination for \"{item.File.Name}\".",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 14,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        root.Children.Add(new TextBlock
+        {
+            Text = destinationPath,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Margin = new Thickness(0, 0, 0, 18)
+        });
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        FileConflictAction selectedAction = FileConflictAction.Cancel;
+
+        void AddActionButton(string caption, FileConflictAction action)
+        {
+            var button = new Button
+            {
+                Content = caption,
+                MinWidth = 82,
+                Height = 34,
+                Margin = new Thickness(6, 0, 0, 0),
+                Padding = new Thickness(8, 0, 8, 0)
+            };
+
+            button.Click += (_, _) =>
+            {
+                selectedAction = action;
+                dialog.DialogResult = true;
+            };
+
+            buttons.Children.Add(button);
+        }
+
+        AddActionButton("Rename", FileConflictAction.Rename);
+        AddActionButton("Skip", FileConflictAction.Skip);
+        AddActionButton("Replace", FileConflictAction.Replace);
+        AddActionButton("Cancel remaining", FileConflictAction.Cancel);
+
+        root.Children.Add(buttons);
+        dialog.Content = root;
+        dialog.ShowDialog();
+
+        return selectedAction;
+    }
+
+    private static string GetUniqueDestinationPath(string destinationPath)
+    {
+        string directory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException(
+                "The destination folder could not be determined.");
+
+        string fileNameWithoutExtension =
+            Path.GetFileNameWithoutExtension(destinationPath);
+
+        string extension = Path.GetExtension(destinationPath);
+
+        int counter = 1;
+        string candidatePath;
+
+        do
+        {
+            candidatePath = Path.Combine(
+                directory,
+                $"{fileNameWithoutExtension} ({counter}){extension}");
+
+            counter++;
+        }
+        while (File.Exists(candidatePath) || Directory.Exists(candidatePath));
+
+        return candidatePath;
     }
 
 

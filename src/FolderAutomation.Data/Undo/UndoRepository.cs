@@ -28,7 +28,8 @@ public class UndoRepository : IUndoRecorder
                 FolderPath TEXT NOT NULL,
                 OriginalPath TEXT NOT NULL,
                 NewPath TEXT NOT NULL,
-                ExecutedAt TEXT NOT NULL
+                ExecutedAt TEXT NOT NULL,
+                ReplacedFileBackupPath TEXT NOT NULL DEFAULT ''
             );
             """;
 
@@ -42,6 +43,11 @@ public class UndoRepository : IUndoRecorder
         AddColumnIfNeeded(
             connection,
             "FolderPath",
+            "TEXT NOT NULL DEFAULT ''");
+
+        AddColumnIfNeeded(
+            connection,
+            "ReplacedFileBackupPath",
             "TEXT NOT NULL DEFAULT ''");
     }
 
@@ -104,7 +110,8 @@ public class UndoRepository : IUndoRecorder
                 FolderPath,
                 OriginalPath,
                 NewPath,
-                ExecutedAt
+                ExecutedAt,
+                ReplacedFileBackupPath
             )
             VALUES
             (
@@ -112,7 +119,8 @@ public class UndoRepository : IUndoRecorder
                 $folderPath,
                 $originalPath,
                 $newPath,
-                $executedAt
+                $executedAt,
+                $replacedFileBackupPath
             );
             """;
 
@@ -135,6 +143,10 @@ public class UndoRepository : IUndoRecorder
         command.Parameters.AddWithValue(
             "$executedAt",
             operation.ExecutedAt.ToString("O"));
+
+        command.Parameters.AddWithValue(
+            "$replacedFileBackupPath",
+            operation.ReplacedFileBackupPath ?? string.Empty);
 
         command.ExecuteNonQuery();
     }
@@ -181,7 +193,8 @@ public class UndoRepository : IUndoRecorder
                 FolderPath,
                 OriginalPath,
                 NewPath,
-                ExecutedAt
+                ExecutedAt,
+                ReplacedFileBackupPath
             FROM UndoOperations
             WHERE OperationId = $operationId
               AND FolderPath = $folderPath
@@ -209,7 +222,10 @@ public class UndoRepository : IUndoRecorder
                 OriginalPath = reader.GetString(2),
                 NewPath = reader.GetString(3),
                 ExecutedAt = DateTime.Parse(
-                    reader.GetString(4))
+                    reader.GetString(4)),
+                ReplacedFileBackupPath = reader.IsDBNull(5)
+                    ? string.Empty
+                    : reader.GetString(5)
             });
         }
 

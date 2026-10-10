@@ -14,7 +14,6 @@ public class UndoService
                 {
                     result.SkippedFiles.Add(
                         $"File no longer exists: {operation.NewPath}");
-
                     continue;
                 }
 
@@ -22,7 +21,19 @@ public class UndoService
                 {
                     result.SkippedFiles.Add(
                         $"Original file already exists: {operation.OriginalPath}");
+                    continue;
+                }
 
+                bool hasReplacementBackup =
+                    !string.IsNullOrWhiteSpace(
+                        operation.ReplacedFileBackupPath);
+
+                if (hasReplacementBackup &&
+                    !File.Exists(operation.ReplacedFileBackupPath))
+                {
+                    result.FailedFiles.Add(
+                        $"Cannot undo replacement because the backup is missing: " +
+                        operation.ReplacedFileBackupPath);
                     continue;
                 }
 
@@ -34,12 +45,39 @@ public class UndoService
                     Directory.CreateDirectory(originalDirectory);
                 }
 
+                // Move the organized file back to its original location.
                 File.Move(
                     operation.NewPath,
                     operation.OriginalPath);
 
-                result.RestoredFiles.Add(
-                    operation.OriginalPath);
+                try
+                {
+                    if (hasReplacementBackup)
+                    {
+                        // Restore the file that was replaced.
+                        File.Move(
+                            operation.ReplacedFileBackupPath,
+                            operation.NewPath);
+                    }
+
+                    result.RestoredFiles.Add(
+                        operation.OriginalPath);
+                }
+                catch
+                {
+                    // If restoring the replacement backup fails,
+                    // attempt to return the incoming file to its
+                    // organized location to avoid a partial undo.
+                    if (File.Exists(operation.OriginalPath) &&
+                        !File.Exists(operation.NewPath))
+                    {
+                        File.Move(
+                            operation.OriginalPath,
+                            operation.NewPath);
+                    }
+
+                    throw;
+                }
             }
             catch (Exception ex)
             {
