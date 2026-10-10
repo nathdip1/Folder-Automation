@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
+
 using FolderAutomation.Features.FolderOrganizer;
 
 namespace FolderAutomation;
@@ -23,6 +24,20 @@ public partial class MainWindow : Window
         {
             if (!ReferenceEquals(expander, expandedExpander))
                 expander.IsExpanded = false;
+        }
+
+        if (expandedExpander.Name == nameof(FolderOrganizerExpander))
+        {
+            FolderOrganizerViewControl.Visibility = Visibility.Visible;
+            FileConverterViewControl.Visibility = Visibility.Collapsed;
+        }
+        else if (string.Equals(
+                     expandedExpander.Header?.ToString(),
+                     "File Converter",
+                     System.StringComparison.Ordinal))
+        {
+            FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
+            FileConverterViewControl.Visibility = Visibility.Visible;
         }
     }
 
@@ -63,6 +78,7 @@ public partial class MainWindow : Window
             yield break;
 
         int childCount = VisualTreeHelper.GetChildrenCount(parent);
+
         for (int i = 0; i < childCount; i++)
         {
             DependencyObject child = VisualTreeHelper.GetChild(parent, i);

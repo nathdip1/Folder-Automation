@@ -1,0 +1,352 @@
+<UserControl x:Class="FolderAutomation.Features.FileConverter.FileConverterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="10"
+            Padding="24">
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+
+            <StackPanel>
+
+                <TextBlock Text="Photo Converter"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                <TextBlock Text="Resize and optimize photos for online forms, exams and job applications."
+                           Margin="0,6,0,22"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                <!-- Select image -->
+                <Border BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="18">
+
+                    <StackPanel>
+                        <TextBlock Text="1. Select Photo"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <Button Content="Choose Image"
+                                Height="40"
+                                Margin="0,14,0,0"
+                                HorizontalAlignment="Left"
+                                Padding="18,0"
+                                Background="{StaticResource PrimaryBrush}"
+                                Foreground="{StaticResource OnPrimaryBrush}"
+                                BorderBrush="{StaticResource PrimaryBrush}"
+                                Click="ChooseImageButton_Click"/>
+
+                        <Image x:Name="SelectedImagePreview"
+                               Height="200"
+                               Margin="0,16,0,0"
+                               Stretch="Uniform"
+                               Visibility="Collapsed"/>
+
+                        <TextBlock x:Name="SelectedImageNameText"
+                                   Margin="0,12,0,0"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   Visibility="Collapsed"/>
+
+                        <TextBlock x:Name="SelectedImageDetailsText"
+                                   Margin="0,5,0,0"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Processing mode -->
+                <TextBlock Text="2. Processing Requirements"
+                           Margin="0,24,0,12"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="MinMaxModeRadio"
+                                 Content="Minimum / Maximum Limits"
+                                 GroupName="ProcessingMode"
+                                 IsChecked="True"
+                                 Margin="0,0,24,0"
+                                 Checked="ProcessingModeRadio_Checked"/>
+
+                    <RadioButton x:Name="ExactTargetModeRadio"
+                                 Content="Exact Target"
+                                 GroupName="ProcessingMode"
+                                 Checked="ProcessingModeRadio_Checked"/>
+                </StackPanel>
+
+                <!-- Minimum and maximum mode -->
+                <Border x:Name="MinMaxSettingsPanel"
+                        Margin="0,14,0,0"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="18">
+
+                    <StackPanel>
+                        <TextBlock Text="Minimum and Maximum Limits"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Min Resolution (W × H)"
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                <Grid Margin="0,6,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="MinWidthTextBox"
+                                             Grid.Column="0"
+                                             Height="36"
+                                             Padding="8"
+                                             ToolTip="Minimum width in pixels"/>
+                                    <TextBox x:Name="MinHeightTextBox"
+                                             Grid.Column="2"
+                                             Height="36"
+                                             Padding="8"
+                                             ToolTip="Minimum height in pixels"/>
+                                </Grid>
+
+                                <TextBlock Text="Min File Size"
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="MinFileSizeTextBox"
+                                             Grid.Column="0"
+                                             Height="36"
+                                             Padding="8"/>
+                                    <ComboBox x:Name="MinFileSizeUnitComboBox"
+                                              Grid.Column="2"
+                                              Height="36"
+                                              SelectedIndex="0">
+                                        <ComboBoxItem Content="KB"/>
+                                        <ComboBoxItem Content="MB"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Max Resolution (W × H)"
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                <Grid Margin="0,6,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="MaxWidthTextBox"
+                                             Grid.Column="0"
+                                             Height="36"
+                                             Padding="8"
+                                             ToolTip="Maximum width in pixels"/>
+                                    <TextBox x:Name="MaxHeightTextBox"
+                                             Grid.Column="2"
+                                             Height="36"
+                                             Padding="8"
+                                             ToolTip="Maximum height in pixels"/>
+                                </Grid>
+
+                                <TextBlock Text="Max File Size"
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="MaxFileSizeTextBox"
+                                             Grid.Column="0"
+                                             Height="36"
+                                             Padding="8"/>
+                                    <ComboBox x:Name="MaxFileSizeUnitComboBox"
+                                              Grid.Column="2"
+                                              Height="36"
+                                              SelectedIndex="0">
+                                        <ComboBoxItem Content="KB"/>
+                                        <ComboBoxItem Content="MB"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Exact target mode -->
+                <Border x:Name="ExactTargetSettingsPanel"
+                        Margin="0,14,0,0"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="18"
+                        Visibility="Collapsed">
+
+                    <StackPanel>
+                        <TextBlock Text="Exact Target"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <TextBlock Text="Resolution (W × H), in pixels"
+                                   Margin="0,14,0,0"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <Grid Margin="0,6,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="TargetWidthTextBox"
+                                     Grid.Column="0"
+                                     Height="38"
+                                     Padding="8"
+                                     ToolTip="Exact output width in pixels"/>
+
+                            <TextBox x:Name="TargetHeightTextBox"
+                                     Grid.Column="2"
+                                     Height="38"
+                                     Padding="8"
+                                     ToolTip="Exact output height in pixels"/>
+                        </Grid>
+
+                        <TextBlock Text="Target File Size"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="TargetFileSizeTextBox"
+                                     Grid.Column="0"
+                                     Height="38"
+                                     Padding="8"/>
+
+                            <ComboBox x:Name="TargetFileSizeUnitComboBox"
+                                      Grid.Column="2"
+                                      Height="38"
+                                      SelectedIndex="0">
+                                <ComboBoxItem Content="KB"/>
+                                <ComboBoxItem Content="MB"/>
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Output format -->
+                <TextBlock Text="Output Format"
+                           Margin="0,20,0,6"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                <ComboBox x:Name="OutputFormatComboBox"
+                          Height="38"
+                          HorizontalAlignment="Left"
+                          Width="180"
+                          SelectedIndex="0">
+                    <ComboBoxItem Content="JPEG"/>
+                    <ComboBoxItem Content="PNG"/>
+                </ComboBox>
+
+                <!-- Process -->
+                <Button x:Name="ProcessImageButton"
+                        Content="Process Photo"
+                        Height="44"
+                        Margin="0,24,0,0"
+                        Background="{StaticResource PrimaryBrush}"
+                        Foreground="{StaticResource OnPrimaryBrush}"
+                        BorderBrush="{StaticResource PrimaryBrush}"
+                        Click="ProcessImageButton_Click"/>
+
+                <TextBlock x:Name="StatusMessageText"
+                           Margin="0,14,0,0"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Text="Select an image to get started."/>
+
+                <!-- Processed result -->
+                <Border x:Name="ResultPanel"
+                        Margin="0,18,0,0"
+                        Padding="18"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="Collapsed">
+
+                    <StackPanel>
+                        <TextBlock Text="Processed Photo"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <Image x:Name="ProcessedImagePreview"
+                               Height="200"
+                               Margin="0,14,0,0"
+                               Stretch="Uniform"/>
+
+                        <TextBlock x:Name="ProcessedImageDetailsText"
+                                   Margin="0,12,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBlock x:Name="ValidationResultText"
+                                   Margin="0,8,0,0"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+
+                        <Button x:Name="SaveOutputButton"
+                                Content="Save Output As..."
+                                Height="40"
+                                HorizontalAlignment="Left"
+                                Margin="0,16,0,0"
+                                Padding="18,0"
+                                Background="{StaticResource PrimaryBrush}"
+                                Foreground="{StaticResource OnPrimaryBrush}"
+                                BorderBrush="{StaticResource PrimaryBrush}"
+                                Click="SaveOutputButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>
