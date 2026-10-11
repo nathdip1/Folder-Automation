@@ -1,9 +1,11 @@
-﻿<Window x:Class="FolderAutomation.MainWindow"
+﻿
+<Window x:Class="FolderAutomation.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:folderOrganizer="clr-namespace:FolderAutomation.Features.FolderOrganizer"
         xmlns:fileConverter="clr-namespace:FolderAutomation.Features.FileConverter"
         xmlns:fileCleaner="clr-namespace:FolderAutomation.Features.FileCleaner"
+        xmlns:fileRenamer="clr-namespace:FolderAutomation.Features.FileRenamer"
         Title="Folder Automation"
         Icon="/FolderAutomation;component/Assets/app.ico"
         Height="760"
@@ -221,21 +223,22 @@
                                 </StackPanel>
                             </Expander>
 
-                            <!-- File Renamer placeholder -->
-                            <Expander Header="File Renamer"
+                            <!-- File Renamer -->
+                            <Expander x:Name="FileRenamerExpander"
+                                      Header="File Renamer"
                                       Expanded="FeatureExpander_Expanded"
                                       Style="{StaticResource FeatureExpanderStyle}"
                                       Margin="0,0,0,8">
                                 <StackPanel Margin="14">
-                                    <TextBlock Text="Rename multiple files using rules."
+                                    <TextBlock Text="Rename multiple files by category with a preview and saved undo history."
                                                FontSize="12"
                                                Foreground="{StaticResource SecondaryTextBrush}"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Text="Coming soon"
+                                    <TextBlock Text="Select this feature to open the renaming tools."
                                                Margin="0,10,0,0"
                                                FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{StaticResource MutedTextBrush}"/>
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Expander>
 
@@ -298,6 +301,10 @@
                 <folderOrganizer:FolderOrganizerView
                     x:Name="FolderOrganizerViewControl"
                     Visibility="Visible"/>
+
+                <fileRenamer:FileRenamerView
+                    x:Name="FileRenamerViewControl"
+                    Visibility="Collapsed"/>
 
                 <fileConverter:FileConverterView
                     x:Name="FileConverterViewControl"

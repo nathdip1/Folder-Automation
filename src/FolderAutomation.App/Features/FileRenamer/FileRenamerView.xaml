@@ -1,0 +1,382 @@
+
+<UserControl x:Class="FolderAutomation.Features.FileRenamer.FileRenamerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="10"
+            Padding="24">
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+
+            <StackPanel>
+
+                <TextBlock Text="File Renamer"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                <TextBlock Text="Select files, define a base name for each category, review the preview, and confirm the rename operation."
+                           Margin="0,6,0,20"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                <!-- Folder selection -->
+                <Border Background="{StaticResource SurfaceSecondaryBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="0,0,0,18">
+
+                    <StackPanel>
+                        <TextBlock Text="SELECTED FOLDER"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBlock x:Name="SelectedFolderText"
+                                   Text="No folder selected"
+                                   Margin="0,7,0,12"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <Button x:Name="SelectFolderButton"
+                                Content="Choose Folder"
+                                Height="40"
+                                HorizontalAlignment="Left"
+                                MinWidth="140"
+                                Padding="14,0"
+                                Background="{StaticResource PrimaryBrush}"
+                                Foreground="{StaticResource OnPrimaryBrush}"
+                                BorderBrush="{StaticResource PrimaryBrush}"
+                                Click="SelectFolderButton_Click"/>
+
+                        <TextBlock x:Name="FileCountText"
+                                   Text="No files loaded"
+                                   Margin="0,10,0,0"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Selection actions -->
+                <TextBlock Text="FILES BY CATEGORY"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,0,0,10"/>
+
+                <TextBlock Text="Only files directly inside the selected folder are listed. Subfolders are not scanned."
+                           Margin="0,0,0,12"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                <Button x:Name="SelectAllFilesButton"
+                        Content="Select All Files"
+                        Height="36"
+                        HorizontalAlignment="Left"
+                        MinWidth="130"
+                        Padding="12,0"
+                        Margin="0,0,0,12"
+                        Background="{StaticResource SurfaceBrush}"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        Click="SelectAllFilesButton_Click"/>
+
+                <!-- Photos -->
+                <Expander x:Name="PhotosExpander"
+                          Header="Photos"
+                          IsExpanded="True"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="PhotosSelectAllCheckBox"
+                                  Content="Select all photos"
+                                  Tag="Photos"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected photos"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="PhotosBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: Holiday"/>
+
+                        <ItemsControl x:Name="PhotosItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Videos -->
+                <Expander x:Name="VideosExpander"
+                          Header="Videos"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="VideosSelectAllCheckBox"
+                                  Content="Select all videos"
+                                  Tag="Videos"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected videos"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="VideosBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: HolidayVideo"/>
+
+                        <ItemsControl x:Name="VideosItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- PDFs -->
+                <Expander x:Name="PdfsExpander"
+                          Header="PDFs"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="PdfsSelectAllCheckBox"
+                                  Content="Select all PDFs"
+                                  Tag="Pdfs"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected PDFs"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="PdfsBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: Invoice"/>
+
+                        <ItemsControl x:Name="PdfsItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Word documents -->
+                <Expander x:Name="WordDocumentsExpander"
+                          Header="Word Documents"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="WordDocumentsSelectAllCheckBox"
+                                  Content="Select all Word documents"
+                                  Tag="WordDocuments"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected Word documents"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="WordDocumentsBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: Report"/>
+
+                        <ItemsControl x:Name="WordDocumentsItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Music -->
+                <Expander x:Name="MusicExpander"
+                          Header="Music"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="MusicSelectAllCheckBox"
+                                  Content="Select all music files"
+                                  Tag="Music"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected music files"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="MusicBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: Playlist"/>
+
+                        <ItemsControl x:Name="MusicItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Excel -->
+                <Expander x:Name="ExcelExpander"
+                          Header="Excel"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="ExcelSelectAllCheckBox"
+                                  Content="Select all Excel files"
+                                  Tag="Excel"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected Excel files"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="ExcelBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: Spreadsheet"/>
+
+                        <ItemsControl x:Name="ExcelItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Other files -->
+                <Expander x:Name="OtherExpander"
+                          Header="Other"
+                          Margin="0,0,0,8"
+                          BorderBrush="{StaticResource BorderBrush}"
+                          BorderThickness="1">
+
+                    <StackPanel Margin="12">
+                        <CheckBox x:Name="OtherSelectAllCheckBox"
+                                  Content="Select all other files"
+                                  Tag="Other"
+                                  Checked="CategorySelectAll_Checked"
+                                  Unchecked="CategorySelectAll_Unchecked"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Base name for selected other files"
+                                   FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}"/>
+
+                        <TextBox x:Name="OtherBaseNameTextBox"
+                                 Margin="0,5,0,12"
+                                 Height="34"
+                                 Padding="8,5"
+                                 ToolTip="Example: File"/>
+
+                        <ItemsControl x:Name="OtherItemsControl"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Rename actions -->
+                <Border Background="{StaticResource SurfaceSecondaryBrush}"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="0,12,0,18">
+
+                    <StackPanel>
+                        <TextBlock Text="RENAME ACTIONS"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   Margin="0,0,0,12"/>
+
+                        <Button x:Name="PreviewRenameButton"
+                                Content="Preview Rename"
+                                Height="40"
+                                Margin="0,0,0,8"
+                                Background="{StaticResource SurfaceBrush}"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                Click="PreviewRenameButton_Click"/>
+
+                        <Button x:Name="RenameSelectedButton"
+                                Content="Confirm Rename"
+                                Height="42"
+                                IsEnabled="False"
+                                Background="{StaticResource PrimaryBrush}"
+                                Foreground="{StaticResource OnPrimaryBrush}"
+                                BorderBrush="{StaticResource PrimaryBrush}"
+                                Click="RenameSelectedButton_Click"/>
+
+                        <Button x:Name="UndoRenameButton"
+                                Content="Undo Latest Rename"
+                                Height="40"
+                                Margin="0,8,0,0"
+                                Background="{StaticResource SurfaceBrush}"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                Click="UndoRenameButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Preview -->
+                <TextBlock Text="RENAME PREVIEW"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,0,0,10"/>
+
+                <Border BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+
+                    <ItemsControl x:Name="RenamePreviewItemsControl"/>
+                </Border>
+
+                <!-- History -->
+                <TextBlock Text="PREVIOUS OPERATIONS"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,22,0,10"/>
+
+                <Border BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+
+                    <ItemsControl x:Name="RenameHistoryItemsControl"/>
+                </Border>
+
+                <!-- Status -->
+                <TextBlock x:Name="RenameStatusText"
+                           Text="Choose a folder to load files."
+                           Margin="0,18,0,0"
+                           FontSize="13"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"/>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

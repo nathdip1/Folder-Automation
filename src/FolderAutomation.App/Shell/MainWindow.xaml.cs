@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,34 +22,40 @@ public partial class MainWindow : Window
         if (sender is not Expander expandedExpander)
             return;
 
+        // Collapse every other feature in the sidebar.
         foreach (Expander expander in FindVisualChildren<Expander>(this))
         {
             if (!ReferenceEquals(expander, expandedExpander))
                 expander.IsExpanded = false;
         }
 
+        // Hide all feature views before showing the selected view.
+        FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
+        FileRenamerViewControl.Visibility = Visibility.Collapsed;
+        FileConverterViewControl.Visibility = Visibility.Collapsed;
+        FileCleanerViewControl.Visibility = Visibility.Collapsed;
+
+        // Display the view corresponding to the selected feature.
         if (expandedExpander.Name == nameof(FolderOrganizerExpander))
         {
             FolderOrganizerViewControl.Visibility = Visibility.Visible;
-            FileConverterViewControl.Visibility = Visibility.Collapsed;
-            FileCleanerViewControl.Visibility = Visibility.Collapsed;
+        }
+        else if (expandedExpander.Name == nameof(FileRenamerExpander))
+        {
+            FileRenamerViewControl.Visibility = Visibility.Visible;
         }
         else if (string.Equals(
                      expandedExpander.Header?.ToString(),
                      "File Converter",
                      StringComparison.Ordinal))
         {
-            FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
             FileConverterViewControl.Visibility = Visibility.Visible;
-            FileCleanerViewControl.Visibility = Visibility.Collapsed;
         }
         else if (string.Equals(
                      expandedExpander.Header?.ToString(),
                      "File Cleaner",
                      StringComparison.Ordinal))
         {
-            FolderOrganizerViewControl.Visibility = Visibility.Collapsed;
-            FileConverterViewControl.Visibility = Visibility.Collapsed;
             FileCleanerViewControl.Visibility = Visibility.Visible;
         }
     }
@@ -64,7 +71,9 @@ public partial class MainWindow : Window
             return;
 
         string selectedFolder = folderDialog.FolderName;
+
         SelectedFolderText.Text = selectedFolder;
+
         FolderOrganizerViewControl.SetSelectedFolder(selectedFolder);
     }
 
